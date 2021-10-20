@@ -1,13 +1,9 @@
 package net.kurdsofts.weatherapplication.ui.main
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Toast
-import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -16,7 +12,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import net.kurdsofts.weatherapplication.R
 import net.kurdsofts.weatherapplication.databinding.FragmentMainBinding
-import kotlin.math.log
 
 @SuppressLint("SetTextI18n")
 @AndroidEntryPoint
