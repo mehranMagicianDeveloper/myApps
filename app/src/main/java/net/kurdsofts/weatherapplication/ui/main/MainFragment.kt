@@ -107,5 +107,31 @@ constructor(
         }
     }
 
+    private fun getCurrent(location: String) {
+        if (location == "") {
+            Toast.makeText(requireContext(), "Please Inter City Name", Toast.LENGTH_LONG).show()
+        } else {
+            viewModel.getCurrent(location)
+            lifecycleScope.launchWhenStarted {
+                viewModel.current.collect {
+                    when (it) {
+                        is MainViewModel.CurrentEvent.Loading -> {
+                            binder.mainProgressBar.visibility = View.VISIBLE
+                        }
+                        is MainViewModel.CurrentEvent.Failure -> {
+                            binder.mainProgressBar.visibility = View.GONE
+                            binder.timeTextView.text = it.errorText
+                        }
+                        is MainViewModel.CurrentEvent.Success -> {
+                            binder.mainProgressBar.visibility = View.GONE
+                            binder.timeTextView.text = it.result.current.last_updated
+                        }
+                        else -> Unit
+                    }
+                }
+            }
+        }
+    }
+
 
 }

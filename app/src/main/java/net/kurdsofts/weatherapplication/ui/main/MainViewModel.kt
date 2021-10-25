@@ -7,7 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import net.kurdsofts.weatherapplication.data.models.Location
-import net.kurdsofts.weatherapplication.data.models.WeatherResponse
+import net.kurdsofts.weatherapplication.data.models.responses.CurrentResponse
+import net.kurdsofts.weatherapplication.data.models.responses.WeatherResponse
 import net.kurdsofts.weatherapplication.repository.MainRepository
 import net.kurdsofts.weatherapplication.util.DispatcherProvider
 import net.kurdsofts.weatherapplication.util.Resource
@@ -21,18 +22,25 @@ constructor(
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
-    sealed class TimeZoneEvent() {
+    sealed class TimeZoneEvent {
         class Success(val result: Location) : TimeZoneEvent()
         class Failure(val errorText: String) : TimeZoneEvent()
         object Loading : TimeZoneEvent()
         object Empty : TimeZoneEvent()
     }
 
-    sealed class WeatherEvent() {
+    sealed class WeatherEvent {
         class Success(val result: WeatherResponse) : WeatherEvent()
         class Failure(val errorText: String) : WeatherEvent()
         object Loading : WeatherEvent()
         object Empty : WeatherEvent()
+    }
+
+    sealed class CurrentEvent {
+        class Success(val result: CurrentResponse) : CurrentEvent()
+        class Failure(val errorText: String) : CurrentEvent()
+        object Loading : CurrentEvent()
+        object Empty : CurrentEvent()
     }
 
     private val _time = MutableStateFlow<TimeZoneEvent>(TimeZoneEvent.Empty)
@@ -40,6 +48,9 @@ constructor(
 
     private val _weather = MutableStateFlow<WeatherEvent>(WeatherEvent.Empty)
     val weather: StateFlow<WeatherEvent> = _weather
+
+    private val _current = MutableStateFlow<CurrentEvent>(CurrentEvent.Empty)
+    val current: StateFlow<CurrentEvent> = _current
 
     fun getTimeZone(location: String) {
         if (location == "") {
@@ -73,14 +84,35 @@ constructor(
             when (val weather = repository.getWeather(location)) {
                 is Resource.Error -> _weather.value = WeatherEvent.Failure(weather.message!!)
                 is Resource.Success -> {
-                    val locationWeather = weather.data!!
-                    if (locationWeather.equals(null)) {
-                        _weather.value = WeatherEvent.Failure("Error:Location Data")
+                    val weatherData = weather.data!!
+                    if (weatherData.equals(null)) {
+                        _weather.value = WeatherEvent.Failure("Error:Weather Data")
                     } else {
                         _weather.value =
-                            WeatherEvent.Success(locationWeather)
+                            WeatherEvent.Success(weatherData)
                     }
                 }
+            }
+        }
+    }
+
+    fun getCurrent(location: String) {
+        if (location == "") {
+            _current.value = CurrentEvent.Failure("Location Not Valid")
+            return
+        }
+        viewModelScope.launch(dispatchers.io) {
+            _current.value = CurrentEvent.Loading
+            when (val current = repository.getCurrent(location)) {
+                is Resource.Success -> {
+                    val currentData = current.data!!
+                    if (currentData.equals(null)) {
+                        _current.value = CurrentEvent.Failure("Error:Current Data")
+                    } else {
+                        _current.value = CurrentEvent.Success(currentData)
+                    }
+                }
+                is Resource.Error -> _current.value = CurrentEvent.Failure(current.message!!)
             }
         }
     }

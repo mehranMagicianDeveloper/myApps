@@ -1,7 +1,8 @@
 package net.kurdsofts.weatherapplication.repository
 
-import net.kurdsofts.weatherapplication.data.models.TimeZoneResponse
-import net.kurdsofts.weatherapplication.data.models.WeatherResponse
+import net.kurdsofts.weatherapplication.data.models.responses.CurrentResponse
+import net.kurdsofts.weatherapplication.data.models.responses.TimeZoneResponse
+import net.kurdsofts.weatherapplication.data.models.responses.WeatherResponse
 import net.kurdsofts.weatherapplication.data.retrofit.DataApi
 import net.kurdsofts.weatherapplication.util.Resource
 import net.kurdsofts.weatherapplication.util.UtilConstants.API_KEY
@@ -39,5 +40,21 @@ class TimeZoneRepository @Inject constructor(
 //            Resource.Error(ex.message ?: "An error accrued")
             Resource.Error(ex.message!!)
         }
+    }
+
+    override suspend fun getCurrent(location: String): Resource<CurrentResponse> {
+        return try {
+            val response = api.getCurrent(API_KEY, location, "no")
+            val result = response.body()
+            if (response.isSuccessful && result != null) {
+                Resource.Success(result)
+            } else {
+                Resource.Error(response.message())
+            }
+        } catch (ex: Exception) {
+//            Resource.Error(ex.message ?: "An error accrued")
+            Resource.Error(ex.message!!)
+        }
+
     }
 }
