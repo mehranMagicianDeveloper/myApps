@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">WeatherApplication</string>
+    <string name="weather">Weather</string>
+    <string name="background_image_view_description">background_image_view</string>
+    <string name="adding_image_view_description">adding_location</string>
 </resources>

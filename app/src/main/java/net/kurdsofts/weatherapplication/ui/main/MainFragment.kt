@@ -11,7 +11,14 @@ import com.bumptech.glide.RequestManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import net.kurdsofts.weatherapplication.R
+import net.kurdsofts.weatherapplication.data.model.models.Condition
+import net.kurdsofts.weatherapplication.data.model.models.Current
+import net.kurdsofts.weatherapplication.data.model.models.Location
+import net.kurdsofts.weatherapplication.data.model.sealed_models.CurrentEvent
+import net.kurdsofts.weatherapplication.data.model.sealed_models.ForecastEvent
+import net.kurdsofts.weatherapplication.data.model.sealed_models.TimeZoneEvent
 import net.kurdsofts.weatherapplication.databinding.FragmentMainBinding
+import net.kurdsofts.weatherapplication.util.DateTime
 
 @SuppressLint("SetTextI18n")
 @AndroidEntryPoint
@@ -24,7 +31,6 @@ constructor(
 
     private val viewModel: MainViewModel by viewModels()
 
-    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binder = FragmentMainBinding.bind(view)
@@ -34,14 +40,22 @@ constructor(
 //            findNavController().navigate(R.id.action_mainFragment_to_ringerFragment)
 //        }
 
-        var location = "Inter Location"
-        binder.locationNameTextView.text = location
-        binder.getDataButton.setOnClickListener {
-            location = binder.locationEditText.text.toString()
-            binder.locationNameTextView.text = location
-            getTimeZone(location)
-            getWeather(location)
-        }
+        bindViews()
+        val mahabad = "mahabad"
+        getCurrent(mahabad)
+
+    }
+
+    private fun bindViews() {
+
+//        ImageView
+        glide.load(R.drawable.weather_background_image)
+            .into(binder.mainBackgroundImageView)
+        glide.load(R.drawable.ic_location)
+            .into(binder.locationImageView)
+
+//        TextView
+        binder.dateTextView.text = DateTime.getDatAndTime()
 
     }
 
@@ -53,21 +67,27 @@ constructor(
             lifecycleScope.launchWhenStarted {
                 viewModel.time.collect { event ->
                     when (event) {
-                        is MainViewModel.TimeZoneEvent.Success -> {
-                            binder.mainProgressBar.visibility = View.GONE
-                            val locationData = event.result
-                            binder.timeTextView.text = locationData.localtime
+                        is TimeZoneEvent.Success -> {
+
+
+//                            add progressbar visibility = gone
+//                            and show data
+
                         }
-                        is MainViewModel.TimeZoneEvent.Failure -> {
-                            binder.mainProgressBar.visibility = View.GONE
+                        is TimeZoneEvent.Failure -> {
+
+//                            add progressbar visibility = gone
+
                             Toast.makeText(
                                 requireContext(),
                                 "error: ${event.errorText}",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
-                        is MainViewModel.TimeZoneEvent.Loading -> {
-                            binder.mainProgressBar.visibility = View.VISIBLE
+                        is TimeZoneEvent.Loading -> {
+
+//                            add progressbar visibility = visible
+
                         }
                         else -> Unit
                     }
@@ -76,29 +96,27 @@ constructor(
         }
     }
 
-    private fun getWeather(location: String) {
+    private fun getForecast(location: String, daysToForecast: Int, aqi: String, alerts: String) {
         if (location == "") {
             Toast.makeText(requireContext(), "Please Inter City Name", Toast.LENGTH_LONG).show()
         } else {
-            viewModel.getWeather(location)
+            viewModel.getForecast(location, daysToForecast, aqi, alerts)
             lifecycleScope.launchWhenStarted {
                 viewModel.weather.collect { event ->
                     when (event) {
-                        is MainViewModel.WeatherEvent.Success -> {
-                            binder.mainProgressBar.visibility = View.GONE
-                            val locationWeather = event.result
-                            binder.weatherTextView.text = "${locationWeather.current.temp_c} C"
+                        is ForecastEvent.Success -> {
+
+
                         }
-                        is MainViewModel.WeatherEvent.Failure -> {
-                            binder.mainProgressBar.visibility = View.GONE
+                        is ForecastEvent.Failure -> {
                             Toast.makeText(
                                 requireContext(),
                                 "error: ${event.errorText}",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
-                        is MainViewModel.WeatherEvent.Loading -> {
-                            binder.mainProgressBar.visibility = View.VISIBLE
+                        is ForecastEvent.Loading -> {
+
                         }
                         else -> Unit
                     }
@@ -113,18 +131,31 @@ constructor(
         } else {
             viewModel.getCurrent(location)
             lifecycleScope.launchWhenStarted {
-                viewModel.current.collect {
-                    when (it) {
-                        is MainViewModel.CurrentEvent.Loading -> {
-                            binder.mainProgressBar.visibility = View.VISIBLE
+                viewModel.current.collect { event ->
+                    when (event) {
+                        is CurrentEvent.Loading -> {
+
                         }
-                        is MainViewModel.CurrentEvent.Failure -> {
-                            binder.mainProgressBar.visibility = View.GONE
-                            binder.timeTextView.text = it.errorText
+                        is CurrentEvent.Failure -> {
+                            Toast.makeText(
+                                requireContext(),
+                                "error: ${event.errorText}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-                        is MainViewModel.CurrentEvent.Success -> {
-                            binder.mainProgressBar.visibility = View.GONE
-                            binder.timeTextView.text = it.result.current.last_updated
+                        is CurrentEvent.Success -> {
+                            val current: Current = event.result.current
+                            val location: Location = event.result.location
+                            val condition: Condition = current.condition
+                            val imageUri = "http:${condition.icon}"
+
+                            binder.weatherTempTextView.text = "${current.temp_c}ᵒ°ᶜ"
+                            binder.conditionTextView.text = condition.text
+                            glide.load(imageUri)
+                                .placeholder(R.drawable.ic_launcher_foreground)
+                                .error(R.drawable.ic_launcher_foreground)
+                                .centerCrop()
+                                .into(binder.weatherImageView)
                         }
                         else -> Unit
                     }
