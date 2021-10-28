@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".ui.main.MainFragment">
 
     <ImageView
         android:id="@+id/mainBackgroundImageView"
@@ -27,6 +28,45 @@
         android:contentDescription="@string/adding_image_view_description"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/loadingLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@+id/addingLocationImageView"
+        app:layout_constraintEnd_toStartOf="@+id/addingLocationImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/addingLocationImageView">
+
+        <TextView
+            android:id="@+id/loadingTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:text="Loading Data..."
+            android:textColor="#EFEFEF"
+            android:textSize="15sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/loadingProgressBar"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="4dp"
+            app:layout_constraintBottom_toBottomOf="@+id/loadingTextView"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/loadingTextView"
+            app:layout_constraintTop_toTopOf="@+id/loadingTextView" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <ScrollView
         android:layout_width="0dp"
@@ -74,17 +114,16 @@
                     android:layout_marginStart="16dp"
                     android:layout_marginTop="16dp"
                     android:adjustViewBounds="true"
-                    android:src="@drawable/ic_location"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
+                    android:id="@+id/locationTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:layout_marginTop="4dp"
                     android:fontFamily="@font/sans_font"
-                    android:text="Mahabad"
                     android:textColor="#EFEFEF"
                     android:textSize="18sp"
                     app:layout_constraintBottom_toBottomOf="@+id/locationImageView"
@@ -98,7 +137,6 @@
                     android:layout_marginStart="16dp"
                     android:layout_marginTop="4dp"
                     android:fontFamily="@font/sans_font"
-                    android:text="Sun, October 24 7:17 PM"
                     android:textColor="#BDBDBD"
                     android:textSize="15sp"
                     android:textStyle="normal"
@@ -148,6 +186,5 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ScrollView>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

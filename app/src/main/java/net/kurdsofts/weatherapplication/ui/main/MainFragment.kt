@@ -2,7 +2,9 @@ package net.kurdsofts.weatherapplication.ui.main
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -13,10 +15,8 @@ import kotlinx.coroutines.flow.collect
 import net.kurdsofts.weatherapplication.R
 import net.kurdsofts.weatherapplication.data.model.models.Condition
 import net.kurdsofts.weatherapplication.data.model.models.Current
-import net.kurdsofts.weatherapplication.data.model.models.Location
 import net.kurdsofts.weatherapplication.data.model.sealed_models.CurrentEvent
 import net.kurdsofts.weatherapplication.data.model.sealed_models.ForecastEvent
-import net.kurdsofts.weatherapplication.data.model.sealed_models.TimeZoneEvent
 import net.kurdsofts.weatherapplication.databinding.FragmentMainBinding
 import net.kurdsofts.weatherapplication.util.DateTime
 
@@ -25,69 +25,98 @@ import net.kurdsofts.weatherapplication.util.DateTime
 class MainFragment
 constructor(
     private val glide: RequestManager
-) : Fragment(R.layout.fragment_main) {
+) : Fragment() {
 
-    private lateinit var binder: FragmentMainBinding
-
+    private var _binding: FragmentMainBinding? = null
+    private val binding get() = _binding!!
     private val viewModel: MainViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentMainBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binder = FragmentMainBinding.bind(view)
         view.layoutDirection = View.LAYOUT_DIRECTION_LTR
-
-//        binder.timeTextView.setOnClickListener {
-//            findNavController().navigate(R.id.action_mainFragment_to_ringerFragment)
-//        }
-
-        bindViews()
-        val mahabad = "mahabad"
-        getCurrent(mahabad)
-
+        bindingView()
+        getCurrent("Mahabad")
     }
 
-    private fun bindViews() {
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    private fun bindingView() {
 
 //        ImageView
         glide.load(R.drawable.weather_background_image)
-            .into(binder.mainBackgroundImageView)
+            .into(binding.mainBackgroundImageView)
         glide.load(R.drawable.ic_location)
-            .into(binder.locationImageView)
+            .into(binding.locationImageView)
+        glide.load(R.drawable.ic_add)
+            .into(binding.addingLocationImageView)
+
+//        onImagesClicking
+        binding.addingLocationImageView.setOnClickListener {
+            Toast
+                .makeText(
+                    requireContext(),
+                    "Want to add locations ?",
+                    Toast.LENGTH_LONG
+                )
+                .show()
+        }
 
 //        TextView
-        binder.dateTextView.text = DateTime.getDatAndTime()
+        binding.dateTextView.text = DateTime.getDatAndTime()
 
+//        Layout
+        binding.loadingLayout.visibility = View.GONE
     }
 
-    private fun getTimeZone(location: String) {
+    private fun getCurrent(location: String) {
         if (location == "") {
             Toast.makeText(requireContext(), "Please Inter City Name", Toast.LENGTH_LONG).show()
         } else {
-            viewModel.getTimeZone(location)
+            binding.locationTextView.text = location
+            viewModel.getCurrentFromRetrofit(location)
             lifecycleScope.launchWhenStarted {
-                viewModel.time.collect { event ->
+                viewModel.current.collect { event ->
                     when (event) {
-                        is TimeZoneEvent.Success -> {
-
-
-//                            add progressbar visibility = gone
-//                            and show data
-
+                        is CurrentEvent.Loading -> {
+                            binding.loadingLayout.visibility = View.VISIBLE
                         }
-                        is TimeZoneEvent.Failure -> {
-
-//                            add progressbar visibility = gone
-
+                        is CurrentEvent.Failure -> {
+                            binding.loadingLayout.visibility = View.GONE
                             Toast.makeText(
                                 requireContext(),
                                 "error: ${event.errorText}",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
-                        is TimeZoneEvent.Loading -> {
-
-//                            add progressbar visibility = visible
-
+                        is CurrentEvent.Success -> {
+                            binding.loadingLayout.visibility = View.GONE
+                            val currentData: Current = event.result.current
+//                            val locationData: Location = event.result.location
+                            val condition: Condition = currentData.condition
+                            val imageUri = "http:${condition.icon}"
+                            binding.weatherTempTextView.text = "${currentData.temp_c}°ᶜ"
+                            binding.conditionTextView.text = condition.text
+                            glide.load(imageUri)
+                                .placeholder(R.drawable.ic_launcher_foreground)
+                                .error(R.drawable.ic_launcher_foreground)
+                                .centerCrop()
+                                .into(binding.weatherImageView)
                         }
                         else -> Unit
                     }
@@ -100,9 +129,9 @@ constructor(
         if (location == "") {
             Toast.makeText(requireContext(), "Please Inter City Name", Toast.LENGTH_LONG).show()
         } else {
-            viewModel.getForecast(location, daysToForecast, aqi, alerts)
+            viewModel.getForecastFromRetrofit(location, daysToForecast, aqi, alerts)
             lifecycleScope.launchWhenStarted {
-                viewModel.weather.collect { event ->
+                viewModel.forecast.collect { event ->
                     when (event) {
                         is ForecastEvent.Success -> {
 
@@ -125,44 +154,8 @@ constructor(
         }
     }
 
-    private fun getCurrent(location: String) {
-        if (location == "") {
-            Toast.makeText(requireContext(), "Please Inter City Name", Toast.LENGTH_LONG).show()
-        } else {
-            viewModel.getCurrent(location)
-            lifecycleScope.launchWhenStarted {
-                viewModel.current.collect { event ->
-                    when (event) {
-                        is CurrentEvent.Loading -> {
-
-                        }
-                        is CurrentEvent.Failure -> {
-                            Toast.makeText(
-                                requireContext(),
-                                "error: ${event.errorText}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        is CurrentEvent.Success -> {
-                            val current: Current = event.result.current
-                            val location: Location = event.result.location
-                            val condition: Condition = current.condition
-                            val imageUri = "http:${condition.icon}"
-
-                            binder.weatherTempTextView.text = "${current.temp_c}ᵒ°ᶜ"
-                            binder.conditionTextView.text = condition.text
-                            glide.load(imageUri)
-                                .placeholder(R.drawable.ic_launcher_foreground)
-                                .error(R.drawable.ic_launcher_foreground)
-                                .centerCrop()
-                                .into(binder.weatherImageView)
-                        }
-                        else -> Unit
-                    }
-                }
-            }
-        }
-    }
-
-
 }
+
+//        binder.timeTextView.setOnClickListener {
+//            findNavController().navigate(R.id.action_mainFragment_to_ringerFragment)
+//        }

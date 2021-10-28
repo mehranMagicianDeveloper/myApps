@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import net.kurdsofts.weatherapplication.data.model.response_models.CurrentResponse
 import net.kurdsofts.weatherapplication.data.model.sealed_models.*
 import net.kurdsofts.weatherapplication.repository.MainRepository
 import net.kurdsofts.weatherapplication.util.DispatcherProvider
@@ -19,83 +20,105 @@ constructor(
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
-    private val _time = MutableStateFlow<TimeZoneEvent>(TimeZoneEvent.Empty)
-    val time: StateFlow<TimeZoneEvent> = _time
 
-    private val _weather = MutableStateFlow<ForecastEvent>(ForecastEvent.Empty)
-    val weather: StateFlow<ForecastEvent> = _weather
+    // Get Current Data ----------------------------------------------------------------------------
 
+    /*
+    Initialize current data state flow
+     */
     private val _current = MutableStateFlow<CurrentEvent>(CurrentEvent.Empty)
     val current: StateFlow<CurrentEvent> = _current
 
-    fun getTimeZone(location: String) {
-        if (location == "") {
-            _time.value = TimeZoneEvent.Failure("Location Not Valid")
-            return
-        }
-        viewModelScope.launch(dispatchers.io) {
-            _time.value = TimeZoneEvent.Loading
-            when (val timeZone = repository.getTimeZone(location)) {
-                is Resource.Error -> _time.value = TimeZoneEvent.Failure(timeZone.message)
-                is Resource.Success -> {
-                    val locationData = timeZone.data.location
-                    if (locationData.equals(null)) {
-                        _time.value = TimeZoneEvent.Failure("Error:Location Data")
-                    } else {
-                        _time.value =
-                            TimeZoneEvent.Success(locationData)
-                    }
-                }
-            }
-        }
-    }
+    /*
+    Get current data using retrofit
+     */
 
-    fun getForecast(location: String, daysToForecast: Int, aqi: String, alerts: String) {
-        if (location == "") {
-            _weather.value = ForecastEvent.Failure("Location Not Valid")
-            return
-        }
-        viewModelScope.launch(dispatchers.io) {
-            _weather.value = ForecastEvent.Loading
-            val forecast = repository
-                .getForecast(
-                    location,
-                    daysToForecast,
-                    aqi,
-                    alerts
-                )
-            when (forecast) {
-                is Resource.Error -> _weather.value = ForecastEvent.Failure(forecast.message)
-                is Resource.Success -> {
-                    val forecastData = forecast.data
-                    if (forecastData.equals(null)) {
-                        _weather.value = ForecastEvent.Failure("Error:Forecast Data")
-                    } else {
-                        _weather.value =
-                            ForecastEvent.Success(forecastData)
-                    }
-                }
-            }
-        }
-    }
-
-    fun getCurrent(location: String) {
+    fun getCurrentFromRetrofit(location: String) {
         if (location == "") {
             _current.value = CurrentEvent.Failure("Location Not Valid")
             return
         }
         viewModelScope.launch(dispatchers.io) {
             _current.value = CurrentEvent.Loading
-            when (val current = repository.getCurrent(location)) {
+            when (val current = repository.getCurrentRetrofit(location)) {
                 is Resource.Success -> {
                     val currentData = current.data
                     if (currentData.equals(null)) {
                         _current.value = CurrentEvent.Failure("Error:Current Data")
                     } else {
+                        insertCurrentDataToRoom(currentData)
                         _current.value = CurrentEvent.Success(currentData)
                     }
                 }
                 is Resource.Error -> _current.value = CurrentEvent.Failure(current.message)
+            }
+        }
+    }
+
+    /*
+    Insert current data to room database to get it back later
+     */
+    private fun insertCurrentDataToRoom(currentResponse: CurrentResponse) {
+        viewModelScope.launch(dispatchers.io) {
+            val lastCurrentResponse = repository.getCurrentResponseFromRoom()
+            if (lastCurrentResponse.equals(null)) {
+                repository.insertCurrentResponseToRoom(currentResponse)
+            } else {
+                repository.deleteCurrentResponseFromRoom(lastCurrentResponse)
+                repository.insertCurrentResponseToRoom(currentResponse)
+            }
+        }
+    }
+
+    /*
+    Get current data using room database
+     */
+    fun getCurentFromRoom() {
+        viewModelScope.launch(dispatchers.io) {
+            val currentResponse = repository.getCurrentResponseFromRoom()
+            _current.value = CurrentEvent.Success(currentResponse)
+        }
+    }
+
+
+    // Get Forecast Data ---------------------------------------------------------------------------
+
+    /*
+    Initialize forecast data state flow
+     */
+    private val _forecast = MutableStateFlow<ForecastEvent>(ForecastEvent.Empty)
+    val forecast: StateFlow<ForecastEvent> = _forecast
+
+    fun getForecastFromRetrofit(
+        location: String,
+        daysToForecast: Int,
+        aqi: String,
+        alerts: String
+    ) {
+        if (location == "") {
+            _forecast.value = ForecastEvent.Failure("Location Not Valid")
+            return
+        }
+        viewModelScope.launch(dispatchers.io) {
+            _forecast.value = ForecastEvent.Loading
+            val forecast = repository
+                .getForecastFromRetrofit(
+                    location,
+                    daysToForecast,
+                    aqi,
+                    alerts
+                )
+            when (forecast) {
+                is Resource.Error -> _forecast.value = ForecastEvent.Failure(forecast.message)
+                is Resource.Success -> {
+                    val forecastData = forecast.data
+                    if (forecastData.equals(null)) {
+                        _forecast.value = ForecastEvent.Failure("Error:Forecast Data")
+                    } else {
+                        _forecast.value =
+                            ForecastEvent.Success(forecastData)
+                    }
+                }
             }
         }
     }
